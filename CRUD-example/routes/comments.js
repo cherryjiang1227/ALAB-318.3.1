@@ -45,7 +45,14 @@ import error from '../utilities/error.js';
 router
   .route("/")
   .get((req, res) => {
-    res.json(comments);
+    const links = [
+      {
+        href: "comments/:id",
+        rel: ":id",
+        type: "GET",
+      },
+    ];
+    res.json({ comments, links });
   })
   .post((req, res, next) => {
     if (req.body.userId && req.body.postId && req.body.body) {
@@ -56,45 +63,50 @@ router
         body: req.body.body,
       };
       comments.push(comment);
-      res.status(201).json(comment);
-    } else {
-      next(error(400, "Insufficient Data"));
-    }
+      res.json(comments[comments.length - 1]);
+    } else next(error(400, "Insufficient Data"));
   });
 
 router
   .route("/:id")
   .get((req, res, next) => {
-    const comment = comments.find(
-      (c) => c.id == req.params.id
-    );
-    if (comment) {
-      res.json(comment);
-    } else {
-      next(error(404, "Comment Not Found"));
-    }
+    const comment = comments.find((c) => c.id == req.params.id);
+    const links = [
+      {
+        href: `/${req.params.id}`,
+        rel: "",
+        type: "PATCH",
+      },
+      {
+        href: `/${req.params.id}`,
+        rel: "",
+        type: "DELETE",
+      },
+    ];
+    if (comment) res.json({ comment, links });
+    else next();
   })
   .patch((req, res, next) => {
-    const comment = comments.find(
-      (c) => c.id == req.params.id
-    );
-    if (comment) {
-      comment.body = req.body.body;
-      res.json(comment);
-    } else {
-      next(error(404, "Comment Not Found"));
-    }
+    const comment = comments.find((c, i) => {
+      if (c.id == req.params.id) {
+        for (const key in req.body) {
+          comments[i][key] = req.body[key];
+        }
+        return true;
+      }
+    });
+    if (comment) res.json(comment);
+    else next();
   })
   .delete((req, res, next) => {
-    const index = comments.findIndex(
-      (c) => c.id == req.params.id
-    );
-    if (index !== -1) {
-      const deleted = comments.splice(index, 1);
-      res.json(deleted[0]);
-    } else {
-      next(error(404, "Comment Not Found"));
-    }
+    const comment = comments.find((c, i) => {
+      if (c.id == req.params.id) {
+        comments.splice(i, 1);
+        return true;
+      }
+    });
+    if (comment) res.json(comment);
+    else next();
   });
 
   export default router;
